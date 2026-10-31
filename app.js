@@ -1,4 +1,5 @@
 const STORAGE_KEY = "todo-list-items";
+const THEME_STORAGE_KEY = "todo-list-theme";
 
 const form = document.querySelector("#todo-form");
 const input = document.querySelector("#todo-input");
@@ -6,8 +7,12 @@ const list = document.querySelector("#todo-list");
 const emptyMessage = document.querySelector("#empty-message");
 const count = document.querySelector("#todo-count");
 const storageError = document.querySelector("#storage-error");
+const themeToggle = document.querySelector("#theme-toggle");
+const filterButtons = document.querySelectorAll(".filter-button");
+const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
 
 let todos = loadTodos();
+let activeFilter = "all";
 
 function loadTodos() {
   try {
@@ -49,10 +54,73 @@ function showStorageError(message) {
   storageError.hidden = false;
 }
 
+function getCurrentTheme() {
+  return document.documentElement.dataset.theme;
+}
+
+function updateThemeButton() {
+  const isDark = getCurrentTheme() === "dark";
+  themeToggle.textContent = isDark ? "☀️ 淺色模式" : "🌙 深色模式";
+  themeToggle.setAttribute(
+    "aria-label",
+    isDark ? "切換為淺色模式" : "切換為深色模式",
+  );
+}
+
+function loadThemePreference() {
+  try {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme === "light" || savedTheme === "dark") {
+      document.documentElement.dataset.theme = savedTheme;
+    } else {
+      document.documentElement.dataset.theme = systemTheme.matches ? "dark" : "light";
+      document.documentElement.dataset.themeSystem = "true";
+    }
+  } catch (error) {
+    document.documentElement.dataset.theme = systemTheme.matches ? "dark" : "light";
+    document.documentElement.dataset.themeSystem = "true";
+    showStorageError("無法讀取主題設定，將依照作業系統的外觀顯示。");
+  }
+
+  updateThemeButton();
+}
+
+themeToggle.addEventListener("click", () => {
+  const nextTheme = getCurrentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
+  delete document.documentElement.dataset.themeSystem;
+  updateThemeButton();
+
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    storageError.hidden = true;
+    storageError.textContent = "";
+  } catch (error) {
+    showStorageError("無法儲存主題設定，重新載入後將依照作業系統的外觀顯示。");
+  }
+});
+
+systemTheme.addEventListener("change", () => {
+  if (document.documentElement.dataset.themeSystem === "true") {
+    document.documentElement.dataset.theme = systemTheme.matches ? "dark" : "light";
+    updateThemeButton();
+  }
+});
+
 function renderTodos() {
   list.replaceChildren();
 
-  for (const todo of todos) {
+  const visibleTodos = todos.filter((todo) => {
+    if (activeFilter === "active") {
+      return !todo.completed;
+    }
+    if (activeFilter === "completed") {
+      return todo.completed;
+    }
+    return true;
+  });
+
+  for (const todo of visibleTodos) {
     const item = document.createElement("li");
     item.className = "todo-item";
     if (todo.completed) {
@@ -91,7 +159,30 @@ function renderTodos() {
 
   const remainingCount = todos.filter((todo) => !todo.completed).length;
   count.textContent = `未完成:${remainingCount} 項`;
-  emptyMessage.hidden = todos.length > 0;
+  emptyMessage.hidden = visibleTodos.length > 0;
+  if (visibleTodos.length > 0) {
+    emptyMessage.textContent = "";
+  } else if (activeFilter === "active") {
+    emptyMessage.textContent = "目前沒有未完成的待辦事項。";
+  } else if (activeFilter === "completed") {
+    emptyMessage.textContent = "目前沒有已完成的待辦事項。";
+  } else {
+    emptyMessage.textContent = "還沒有任何待辦事項，新增一個吧!";
+  }
+}
+
+for (const button of filterButtons) {
+  button.addEventListener("click", () => {
+    activeFilter = button.dataset.filter;
+
+    for (const filterButton of filterButtons) {
+      const isActive = filterButton === button;
+      filterButton.classList.toggle("is-active", isActive);
+      filterButton.setAttribute("aria-pressed", String(isActive));
+    }
+
+    renderTodos();
+  });
 }
 
 form.addEventListener("submit", (event) => {
@@ -113,4 +204,5 @@ form.addEventListener("submit", (event) => {
   input.focus();
 });
 
+loadThemePreference();
 renderTodos();
