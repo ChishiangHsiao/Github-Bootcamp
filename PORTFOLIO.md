@@ -4,7 +4,7 @@
 
 ## 線上展示
 
-`https://<你的帳號>.github.io/<你的repo名稱>/`
+`https://chishianghsiao.github.io/Github-Bootcamp/`
 
 > 將上方佔位網址替換成實際的 GitHub Pages 網址。
 
