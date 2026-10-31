@@ -168,7 +168,8 @@ function renderTodos() {
   } else if (activeFilter === "active") {
     emptyMessage.textContent = "目前沒有未完成的待辦事項。";
   } else if (activeFilter === "completed") {
-    emptyMessage.textContent = "目前沒有已完成的待辦事項。";
+    emptyMessage.textContent =
+      "目前沒有已完成的待辦事項。若剛取消勾選，該項目仍保留在清單中，可切換至「全部」或「未完成」查看。";
   } else {
     emptyMessage.textContent = "還沒有任何待辦事項，新增一個吧!";
   }
